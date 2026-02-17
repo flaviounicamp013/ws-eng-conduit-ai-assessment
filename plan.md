@@ -1,29 +1,76 @@
-# Implementation Plan
+Plan
 
-This document will contain the plan for the implementation of the user story, which you should fill BEFORE you start coding. Replace the placeholder/example text below with your actual plan, while retaining the structure.
+Analyze existing article module (entity, service, controller, DTOs, frontend forms) to ensure consistency with current architecture and patterns.
 
-## Plan
+Extend data model to support co-authors using a many-to-many relationship between articles and users.
 
-High-level step by step plan of what you will do. For example:
+Create database migration adding join table article_co_authors.
 
-- Add a new table for chat messages,
-- Implement a repo, service and controller for reading and creating chat messages,
-- Update the React frontend to allow users to send and view messages,
-- ...
+Update Article entity and DTOs to support co-author IDs with validation.
 
-## Decisions
+Update article create and update endpoints to persist co-authors.
 
-The top 2-3 decisions you have taken, plus the alternatives and rationale for your choices. Each alternative listed must be feasible (i.e., do not list alternatives would not even work). 
+Implement authorization logic at service layer ensuring only author or co-authors can edit articles.
 
-You should include a decision for cases where you either: change the data model, select a third-party library (or build something from scratch), or create a new mechanism/pattern. 
+Add endpoint to fetch users for dropdown selection.
 
-For example:
+Update Create Article UI to include multi-select dropdown for co-authors.
 
-- Decision: Use GitHub Codespaces for the development environment.
-  - Alternative: Use a local development environment.
-  - Alternative: Use Gitpod for the development environment.
-  - Rationale: Setting up a local environment is time-consuming and error-prone. Gitpod "Clasic" (hosted in the cloud) will be sunset on April 2025, and GitHub Codespaces allows leveraging Dev Containers - which can also be used locally if really needed. Hence we select GitHub Codespaces as it's the most future-proof and flexible option.
+Update Edit Article UI to enforce permission validation.
 
-## Notes
+Implement article locking system:
 
-Any additional notes that you think are relevant to the plan. For example, do we need to perform any changes to the AWS architecture to support the new feature? Briefly describe the changes you would need to make.
+Create table article_locks with fields articleId, lockedBy, lockedAt, expiresAt.
+
+Add endpoint to acquire lock when editor opens article.
+
+Add endpoint to release lock on save or navigation away.
+
+Validate lock ownership on update requests.
+
+Expire locks automatically using timestamp comparison.
+
+Implement backend validation middleware/guard that prevents edits without lock ownership.
+
+Add frontend handling for lock conflicts and lock loss scenarios.
+
+Manually run acceptance tests and capture screenshots.
+
+Confirm existing pages remain unchanged and display only original author.
+
+Submit solution.
+
+Decisions
+Decision 1 — Many-to-Many Join Table for Co-Authors
+
+Alternative: Store comma-separated emails.
+
+Alternative: Store JSON array column.
+
+Rationale: Join table preserves referential integrity, enables efficient queries, enforces valid users, and aligns with relational database normalization principles.
+
+Decision 2 — Server-Side Locking with Expiration Timestamp
+
+Alternative: Frontend-only locking.
+
+Alternative: WebSocket presence-based locking.
+
+Rationale: Server-side locking guarantees consistency across distributed instances and prevents race conditions. Timestamp expiration prevents stale locks without requiring persistent connections or additional infrastructure.
+
+Decision 3 — Lock Validation via Backend Guard
+
+Alternative: Validate lock only in controller logic.
+
+Alternative: Validate only in frontend.
+
+Rationale: A guard ensures centralized and reusable enforcement of locking rules across all write operations, reducing duplication and preventing accidental bypass.
+
+Notes
+
+No AWS infrastructure changes are required since locking state is persisted in the shared database, making it compatible with horizontally scaled environments.
+
+Lock state stored in database ensures consistency across multiple application instances.
+
+Co-authors functionality is isolated from existing article display logic to avoid regressions.
+
+Feature is implemented strictly within scope to avoid unintended side effects.
